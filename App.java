@@ -1,109 +1,266 @@
-import dao.TrainDAO;
-import dao.PassengerDAO;
 import dao.BookingDAO;
 import dao.PaymentDAO;
+import dao.TrainDAO;
+
 import model.Train;
+import model.Traveller;
 
 import java.util.ArrayList;
 import java.util.Scanner;
 
+
 public class App {
+
 
     public static void main(String[] args) {
 
-        Scanner sc = new Scanner(System.in);
 
-        TrainDAO trainDAO = new TrainDAO();
-        PassengerDAO passengerDAO = new PassengerDAO();
-        BookingDAO bookingDAO = new BookingDAO();
-        PaymentDAO paymentDAO = new PaymentDAO();
+        Scanner sc =
+                new Scanner(System.in);
+
+
+        TrainDAO trainDAO =
+                new TrainDAO();
+
+
+        BookingDAO bookingDAO =
+                new BookingDAO();
+
+
+        PaymentDAO paymentDAO =
+                new PaymentDAO();
+
 
         // =====================================================
-        // WELCOME
+        // MAIN MENU
         // =====================================================
 
         System.out.println();
-        System.out.println("==============================================");
-        System.out.println("              WELCOME TO RAILSYNC");
-        System.out.println("       Railway Reservation System");
-        System.out.println("==============================================");
+
+        System.out.println(
+                "===================================="
+        );
+
+        System.out.println(
+                "       RAILSYNC RAILWAY SYSTEM"
+        );
+
+        System.out.println(
+                "===================================="
+        );
+
+
+        System.out.println(
+                "1. Book Tickets"
+        );
+
+
+        System.out.println(
+                "2. View Ticket"
+        );
+
+
+        System.out.print(
+                "Enter choice: "
+        );
+
+
+        int choice =
+                Integer.parseInt(
+                        sc.nextLine()
+                );
+
 
         // =====================================================
-        // SEARCH TRAIN
+        // VIEW TICKET
         // =====================================================
 
-        System.out.println();
-        System.out.println("========== SEARCH TRAIN ==========");
+        if (choice == 2) {
 
-        System.out.print("Enter source: ");
-        String source = sc.nextLine().trim();
 
-        System.out.print("Enter destination: ");
-        String destination = sc.nextLine().trim();
+            System.out.print(
+                    "Enter Booking ID: "
+            );
 
-        ArrayList<Train> trains =
-                trainDAO.searchTrains(source, destination);
 
-        // =====================================================
-        // CHECK TRAIN AVAILABILITY
-        // =====================================================
+            int bookingId =
+                    Integer.parseInt(
+                            sc.nextLine()
+                    );
 
-        if (trains == null || trains.size() == 0) {
 
-            System.out.println();
-            System.out.println("----------------------------------------------");
-            System.out.println("No trains available for this route.");
-            System.out.println("----------------------------------------------");
+            bookingDAO.viewTicket(
+                    bookingId
+            );
+
 
             sc.close();
+
             return;
         }
 
+
         // =====================================================
-        // DISPLAY AVAILABLE TRAINS
+        // BOOK TICKETS
+        // =====================================================
+
+        if (choice != 1) {
+
+
+            System.out.println(
+                    "Invalid choice!"
+            );
+
+
+            sc.close();
+
+            return;
+        }
+
+
+        // =====================================================
+        // SOURCE
+        // =====================================================
+
+        System.out.print(
+                "Enter Source: "
+        );
+
+
+        String source =
+                sc.nextLine();
+
+
+        // =====================================================
+        // DESTINATION
+        // =====================================================
+
+        System.out.print(
+                "Enter Destination: "
+        );
+
+
+        String destination =
+                sc.nextLine();
+
+
+        // =====================================================
+        // SEARCH TRAINS
+        // =====================================================
+
+        ArrayList<Train> trains =
+                trainDAO.searchTrains(
+                        source,
+                        destination
+                );
+
+
+        if (trains.isEmpty()) {
+
+
+            System.out.println(
+                    "No trains found!"
+            );
+
+
+            sc.close();
+
+            return;
+        }
+
+
+        // =====================================================
+        // DISPLAY TRAINS
         // =====================================================
 
         System.out.println();
-        System.out.println("========== AVAILABLE TRAINS ==========");
 
-        for (int i = 0; i < trains.size(); i++) {
+        System.out.println(
+                "========== AVAILABLE TRAINS =========="
+        );
 
-            Train train = trains.get(i);
+
+        for (int i = 0;
+             i < trains.size();
+             i++) {
+
+
+            Train train =
+                    trains.get(i);
+
 
             System.out.println();
-            System.out.println(
-                    (i + 1) + ". "
-                    + train.getTrainName()
-                    + " (" + train.getTrainNumber() + ")"
-            );
+
 
             System.out.println(
-                    "   Route          : "
+                    "Train " + (i + 1)
+            );
+
+
+            System.out.println(
+                    "Train ID : "
+                    + train.getTrainId()
+            );
+
+
+            System.out.println(
+                    "Train Number : "
+                    + train.getTrainNumber()
+            );
+
+
+            System.out.println(
+                    "Train Name : "
+                    + train.getTrainName()
+            );
+
+
+            System.out.println(
+                    "Route : "
                     + train.getSource()
                     + " -> "
                     + train.getDestination()
             );
 
+
             System.out.println(
-                    "   Departure      : "
+                    "Departure : "
                     + train.getDepartureTime()
             );
 
+
             System.out.println(
-                    "   Arrival        : "
+                    "Arrival : "
                     + train.getArrivalTime()
             );
 
-            System.out.println(
-                    "   Fare per Seat  : Rs."
-                    + train.getFare()
-            );
 
             System.out.println(
-                    "   Available Seats: "
-                    + train.getAvailableSeats()
+                    "Fare : Rs."
+                    + train.getFare()
             );
+            ArrayList<String> booked =
+        bookingDAO.getBookedSeats(
+                train.getTrainId()
+        );
+
+int totalSeats =
+        train.getTotalSeats();
+
+int availableSeats =
+        totalSeats - booked.size();
+
+System.out.println(
+        "Total Seats : " + totalSeats
+);
+
+System.out.println(
+        "Available Seats : " + availableSeats
+);
+
         }
+           
+
 
         // =====================================================
         // SELECT TRAIN
@@ -111,818 +268,636 @@ public class App {
 
         System.out.println();
 
-        int trainChoice;
+        System.out.print(
+                "Select Train Number: "
+        );
 
-        while (true) {
 
-            System.out.print(
-                    "Select train number (1-"
-                    + trains.size()
-                    + "): "
+        int trainChoice =
+                Integer.parseInt(
+                        sc.nextLine()
+                );
+
+
+        if (trainChoice < 1 ||
+            trainChoice > trains.size()) {
+
+
+            System.out.println(
+                    "Invalid train choice!"
             );
 
-            String input =
-                    sc.nextLine().trim();
 
-            try {
+            sc.close();
 
-                trainChoice =
-                        Integer.parseInt(input);
-
-                if (trainChoice >= 1
-                        && trainChoice <= trains.size()) {
-
-                    break;
-
-                } else {
-
-                    System.out.println(
-                            "Please select a valid train number."
-                    );
-                }
-
-            } catch (NumberFormatException e) {
-
-                System.out.println(
-                        "Please enter a number only."
-                );
-            }
+            return;
         }
 
+
         Train selectedTrain =
-                trains.get(trainChoice - 1);
+                trains.get(
+                        trainChoice - 1
+                );
+
 
         // =====================================================
-        // SELECTED TRAIN
+        // GET BOOKED SEATS
         // =====================================================
-
-        System.out.println();
-        System.out.println("==============================================");
-        System.out.println("              SELECTED TRAIN");
-        System.out.println("==============================================");
-
-        System.out.println(
-                "Train        : "
-                + selectedTrain.getTrainName()
-        );
-
-        System.out.println(
-                "Train Number : "
-                + selectedTrain.getTrainNumber()
-        );
-
-        System.out.println(
-                "Route        : "
-                + selectedTrain.getSource()
-                + " -> "
-                + selectedTrain.getDestination()
-        );
-
-        System.out.println(
-                "Departure    : "
-                + selectedTrain.getDepartureTime()
-        );
-
-        System.out.println(
-                "Arrival      : "
-                + selectedTrain.getArrivalTime()
-        );
-
-        System.out.println(
-                "Fare/Seat    : Rs."
-                + selectedTrain.getFare()
-        );
-
-        System.out.println(
-                "=============================================="
-        );
-
-        // =====================================================
-        // AVAILABLE SEATS
-        // =====================================================
-
-        System.out.println();
-        System.out.println("==============================================");
-        System.out.println("              SEAT SELECTION");
-        System.out.println("==============================================");
 
         ArrayList<String> bookedSeats =
                 bookingDAO.getBookedSeats(
                         selectedTrain.getTrainId()
                 );
 
-        ArrayList<String> availableSeats =
-                new ArrayList<>();
-
-        // Generate A1-A14, B1-B14, C1-C14
-        for (char row = 'A'; row <= 'C'; row++) {
-
-            for (int number = 1; number <= 14; number++) {
-
-                String seat =
-                        row + String.valueOf(number);
-
-                boolean alreadyBooked = false;
-
-                for (int i = 0;
-                     i < bookedSeats.size();
-                     i++) {
-
-                    if (bookedSeats.get(i)
-                            .equalsIgnoreCase(seat)) {
-
-                        alreadyBooked = true;
-                        break;
-                    }
-                }
-
-                if (!alreadyBooked) {
-
-                    availableSeats.add(seat);
-                }
-            }
-        }
 
         // =====================================================
-        // NO SEATS AVAILABLE
+        // DISPLAY SEAT MAP
         // =====================================================
 
-        if (availableSeats.size() == 0) {
+System.out.println();
 
-            System.out.println();
-            System.out.println("----------------------------------------------");
-            System.out.println(
-                    "Sorry! No seats are available for this train."
+System.out.println(
+        "========== AVAILABLE SEATS  =========="
+);
+
+for (int row = 0; row < 3; row++) {
+
+    char rowLetter = (char) ('A' + row);
+
+    for (int seat = 1; seat <= 14; seat++) {
+
+        String seatNumber =
+                rowLetter + String.valueOf(seat);
+
+        if (!bookedSeats.contains(seatNumber)) {
+
+            System.out.print(
+                    "[" + seatNumber + "] "
             );
-            System.out.println("----------------------------------------------");
-
-            sc.close();
-            return;
         }
+    }
 
-        // =====================================================
-        // DISPLAY AVAILABLE SEATS
-        // =====================================================
+    System.out.println();
+}
 
-        System.out.println();
-        System.out.println("Available Seats:");
-        System.out.println();
-
-        for (int i = 0;
-             i < availableSeats.size();
-             i++) {
-
-            System.out.printf(
-                    "%-6s",
-                    availableSeats.get(i)
-            );
-
-            if ((i + 1) % 7 == 0) {
-                System.out.println();
-            }
-        }
-
-        System.out.println();
-
-        System.out.println("----------------------------------------------");
-        System.out.println(
-                "You can select multiple seats."
-        );
-        System.out.println(
-                "Example: A1 A4 A5"
-        );
-        System.out.println("----------------------------------------------");
+ 
 
         // =====================================================
         // SELECT MULTIPLE SEATS
         // =====================================================
 
+        System.out.println();
+
+        System.out.println(
+                "Enter seats separated by space."
+        );
+
+
+        System.out.println(
+                "Example: A1 A2 A3"
+        );
+
+
+        System.out.print(
+                "Enter seats: "
+        );
+
+
+        String seatInput =
+                sc.nextLine();
+
+
+        String[] seatArray =
+                seatInput.trim().split("\\s+");
+
+
         ArrayList<String> selectedSeats =
                 new ArrayList<>();
 
-        while (true) {
-
-            System.out.print("Select seat(s): ");
-
-            String input =
-                    sc.nextLine()
-                      .trim()
-                      .toUpperCase();
-
-            // Empty input
-            if (input.length() == 0) {
-
-                System.out.println();
-                System.out.println(
-                        "Please select at least one seat."
-                );
-
-                continue;
-            }
-
-            String[] seats =
-                    input.split("\\s+");
-
-            ArrayList<String> tempSeats =
-                    new ArrayList<>();
-
-            boolean validSelection = true;
-
-            // =================================================
-            // CHECK EACH SEAT
-            // =================================================
-
-            for (int i = 0;
-                 i < seats.length;
-                 i++) {
-
-                String seat =
-                        seats[i];
-
-                boolean seatAvailable = false;
-
-                // Check if seat exists
-                for (int j = 0;
-                     j < availableSeats.size();
-                     j++) {
-
-                    if (availableSeats.get(j)
-                            .equalsIgnoreCase(seat)) {
-
-                        seatAvailable = true;
-
-                        // Store correct format
-                        seat =
-                                availableSeats.get(j);
-
-                        break;
-                    }
-                }
-
-                // Invalid / booked seat
-                if (!seatAvailable) {
-
-                    System.out.println();
-                    System.out.println(
-                            "X Seat "
-                            + seat
-                            + " is not available."
-                    );
-
-                    validSelection = false;
-                    break;
-                }
-
-                // =================================================
-                // CHECK DUPLICATE SEAT
-                // =================================================
-
-                boolean duplicate = false;
-
-                for (int j = 0;
-                     j < tempSeats.size();
-                     j++) {
-
-                    if (tempSeats.get(j)
-                            .equalsIgnoreCase(seat)) {
-
-                        duplicate = true;
-                        break;
-                    }
-                }
-
-                if (duplicate) {
-
-                    System.out.println();
-                    System.out.println(
-                            "X Seat "
-                            + seat
-                            + " was selected more than once."
-                    );
-
-                    validSelection = false;
-                    break;
-                }
-
-                tempSeats.add(seat);
-            }
-
-            // =================================================
-            // INVALID SELECTION
-            // =================================================
-
-            if (!validSelection) {
-
-                System.out.println();
-                System.out.println(
-                        "Please try again."
-                );
-
-                System.out.println(
-                        "Example: A1 A4 A5"
-                );
-
-                System.out.println();
-
-                continue;
-            }
-
-            // =================================================
-            // SAVE SELECTED SEATS
-            // =================================================
-
-            selectedSeats.clear();
-
-            for (int i = 0;
-                 i < tempSeats.size();
-                 i++) {
-
-                selectedSeats.add(
-                        tempSeats.get(i)
-                );
-            }
-
-            break;
-        }
-
-        // =====================================================
-        // CALCULATE TOTAL FARE
-        // =====================================================
-
-        double totalFare =
-                selectedTrain.getFare()
-                * selectedSeats.size();
-
-        // =====================================================
-        // SEAT SUMMARY
-        // =====================================================
-
-        System.out.println();
-        System.out.println("==============================================");
-        System.out.println("           SEAT SELECTION SUMMARY");
-        System.out.println("==============================================");
-
-        System.out.print("Selected Seats : ");
 
         for (int i = 0;
-             i < selectedSeats.size();
+             i < seatArray.length;
              i++) {
 
-            System.out.print(
-                    selectedSeats.get(i)
-            );
 
-            if (i < selectedSeats.size() - 1) {
+            String seat =
+                    seatArray[i].toUpperCase();
 
-                System.out.print(", ");
+
+            if (bookedSeats.contains(seat)) {
+
+
+                System.out.println(
+                        "Seat "
+                        + seat
+                        + " is already booked!"
+                );
+
+
+                sc.close();
+
+                return;
             }
+
+
+            if (selectedSeats.contains(seat)) {
+
+
+                System.out.println(
+                        "Duplicate seat selected: "
+                        + seat
+                );
+
+
+                sc.close();
+
+                return;
+            }
+
+
+            selectedSeats.add(seat);
         }
 
-        System.out.println();
 
-        System.out.println(
-                "Number of Seats: "
-                + selectedSeats.size()
-        );
+        if (selectedSeats.isEmpty()) {
 
-        System.out.println(
-                "Fare per Seat  : Rs."
-                + selectedTrain.getFare()
-        );
-
-        System.out.println(
-                "Total Fare     : Rs."
-                + totalFare
-        );
-
-        System.out.println(
-                "=============================================="
-        );
-
-        // =====================================================
-        // PASSENGER DETAILS
-        // =====================================================
-
-        System.out.println();
-        System.out.println("========== PASSENGER DETAILS ==========");
-
-        System.out.print(
-                "Enter passenger name: "
-        );
-
-        String name =
-                sc.nextLine().trim();
-
-        while (name.length() == 0) {
 
             System.out.println(
-                    "Name cannot be empty."
+                    "No seat selected!"
             );
 
-            System.out.print(
-                    "Enter passenger name: "
-            );
-
-            name =
-                    sc.nextLine().trim();
-        }
-
-        int age;
-
-        while (true) {
-
-            System.out.print(
-                    "Enter age: "
-            );
-
-            String ageInput =
-                    sc.nextLine().trim();
-
-            try {
-
-                age =
-                        Integer.parseInt(ageInput);
-
-                if (age > 0 && age <= 120) {
-
-                    break;
-                }
-
-                System.out.println(
-                        "Please enter a valid age."
-                );
-
-            } catch (NumberFormatException e) {
-
-                System.out.println(
-                        "Please enter age as a number."
-                );
-            }
-        }
-
-        System.out.print(
-                "Enter gender: "
-        );
-
-        String gender =
-                sc.nextLine().trim();
-
-        System.out.print(
-                "Enter phone: "
-        );
-
-        String phone =
-                sc.nextLine().trim();
-
-        System.out.print(
-                "Enter email: "
-        );
-
-        String email =
-                sc.nextLine().trim();
-
-        // =====================================================
-        // PAYMENT
-        // =====================================================
-
-        System.out.println();
-        System.out.println("==============================================");
-        System.out.println("                 PAYMENT");
-        System.out.println("==============================================");
-
-        System.out.println(
-                "Number of Seats : "
-                + selectedSeats.size()
-        );
-
-        System.out.println(
-                "Total Amount    : Rs."
-                + totalFare
-        );
-
-        System.out.println();
-
-        System.out.println("1. UPI");
-        System.out.println("2. Card");
-        System.out.println("3. NetBanking");
-
-        System.out.println();
-
-        String paymentInput;
-        String paymentMethod;
-
-        while (true) {
-
-            System.out.print(
-                    "Select payment method (1/2/3): "
-            );
-
-            paymentInput =
-                    sc.nextLine()
-                      .trim()
-                      .toUpperCase();
-
-            if (paymentInput.equals("1")
-                    || paymentInput.equals("UPI")) {
-
-                paymentMethod =
-                        "UPI";
-
-                break;
-
-            } else if (paymentInput.equals("2")
-                    || paymentInput.equals("CARD")) {
-
-                paymentMethod =
-                        "CARD";
-
-                break;
-
-            }else if (paymentInput.equals("3")
-                    || paymentInput.equals("NETBANKING")) {
-
-                paymentMethod =
-                        "NetBanking";
-
-                break;
-
-            }
-             else {
-
-                System.out.println();
-                System.out.println(
-                        "Invalid payment method."
-                );
-
-                System.out.println(
-                        "Please enter 1, 2 or 3."
-                );
-            }
-        }
-
-        // =====================================================
-        // SAVE PASSENGER
-        // =====================================================
-
-        System.out.println();
-        System.out.println(
-                "Processing passenger details..."
-        );
-
-        int passengerId =
-                passengerDAO.addPassenger(
-                        name,
-                        age,
-                        gender,
-                        phone,
-                        email
-                );
-
-        if (passengerId == -1) {
-
-            System.out.println();
-            System.out.println(
-                    "Passenger registration failed."
-            );
 
             sc.close();
+
             return;
         }
 
-        System.out.println(
-                "Passenger details saved successfully."
-        );
 
         // =====================================================
-        // CREATE MULTIPLE BOOKINGS
+        // NUMBER OF TRAVELLERS
         // =====================================================
 
         System.out.println();
-        System.out.println(
-                "Creating your booking..."
+
+        System.out.print(
+                "Enter number of travellers: "
         );
 
-        ArrayList<Integer> bookingIds =
-                bookingDAO.createBookings(
-                        passengerId,
-                        selectedTrain.getTrainId(),
-                        selectedSeats,
-                        selectedTrain.getFare()
+
+        int numberOfTravellers =
+                Integer.parseInt(
+                        sc.nextLine()
                 );
 
-        // =====================================================
-        // CHECK BOOKING
-        // =====================================================
 
-        if (bookingIds.size()
+        // Number must exactly match seats
+
+        if (numberOfTravellers
                 != selectedSeats.size()) {
 
+
             System.out.println();
-            System.out.println(
-                    "Booking creation failed."
-            );
 
             System.out.println(
-                    "Please try again."
+                    "Number of travellers must "
+                    + "match selected seats!"
             );
+
 
             sc.close();
+
             return;
         }
 
-        System.out.println(
-                "Booking created successfully."
-        );
 
         // =====================================================
-        // SAVE PAYMENT
+        // TRAVELLER LIST
         // =====================================================
+
+        ArrayList<Traveller> travellers =
+                new ArrayList<>();
+
+
+        // =====================================================
+        // ENTER TRAVELLER DETAILS
+        // =====================================================
+
+        for (int i = 0;
+             i < numberOfTravellers;
+             i++) {
+
+
+            System.out.println();
+
+            System.out.println(
+                    "===================================="
+            );
+
+
+            System.out.println(
+                    "       TRAVELLER "
+                    + (i + 1)
+                    + " DETAILS"
+            );
+
+
+            System.out.println(
+                    "===================================="
+            );
+
+
+            if (i == 0) {
+
+
+                System.out.println(
+                        "Booking Owner / Your Details"
+                );
+
+            } else {
+
+
+                System.out.println(
+                        "Friend / Family Member Details"
+                );
+            }
+
+
+            // -------------------------------------------------
+            // NAME
+            // -------------------------------------------------
+
+            System.out.print(
+                    "Name: "
+            );
+
+
+            String name =
+                    sc.nextLine();
+
+
+            // -------------------------------------------------
+            // AGE
+            // -------------------------------------------------
+
+            System.out.print(
+                    "Age: "
+            );
+
+
+            int age =
+                    Integer.parseInt(
+                            sc.nextLine()
+                    );
+
+
+            // -------------------------------------------------
+            // GENDER
+            // -------------------------------------------------
+
+            System.out.print(
+                    "Gender: "
+            );
+
+
+            String gender =
+                    sc.nextLine();
+
+
+            // -------------------------------------------------
+            // PHONE
+            // -------------------------------------------------
+
+            System.out.print(
+                    "Phone: "
+            );
+
+
+            String phone =
+                    sc.nextLine();
+
+
+            // -------------------------------------------------
+            // EMAIL
+            // -------------------------------------------------
+
+            System.out.print(
+                    "Email: "
+            );
+
+
+            String email =
+                    sc.nextLine();
+
+
+            // -------------------------------------------------
+            // ASSIGN SEAT
+            // -------------------------------------------------
+
+            String seatNumber =
+                    selectedSeats.get(i);
+
+
+            System.out.println(
+                    "Assigned Seat: "
+                    + seatNumber
+            );
+
+
+            // -------------------------------------------------
+            // CREATE TRAVELLER
+            // -------------------------------------------------
+
+            Traveller traveller =
+                    new Traveller(
+                            name,
+                            age,
+                            gender,
+                            phone,
+                            email,
+                            seatNumber
+                    );
+
+
+            travellers.add(
+                    traveller
+            );
+        }
+
+
+        // =====================================================
+        // PAYMENT METHOD
+        // =====================================================
+
+   
+System.out.println();
+
+System.out.println(
+        "========== PAYMENT =========="
+);
+
+System.out.println(
+        "1. UPI"
+);
+
+System.out.println(
+        "2. Card"
+);
+
+System.out.println(
+        "3. NetBanking"
+);
+
+System.out.print(
+        "Select payment method: "
+);
+
+
+// Take input as String so both number and name work
+String paymentInput =
+        sc.nextLine();
+
+
+String paymentMethod;
+
+
+if (paymentInput.equals("1") ||
+    paymentInput.equalsIgnoreCase("UPI")) {
+
+    paymentMethod = "UPI";
+
+} else if (paymentInput.equals("2") ||
+           paymentInput.equalsIgnoreCase("CARD")) {
+
+    paymentMethod = "CARD";
+
+} else if (paymentInput.equals("3") ||
+           paymentInput.equalsIgnoreCase("NetBanking")) {
+
+    paymentMethod = "NetBanking";
+
+} else {
+
+    System.out.println(
+            "Invalid payment method!"
+    );
+
+    sc.close();
+
+    return;
+}
+
+
+System.out.println(
+        "Selected payment method: "
+        + paymentMethod
+);
+
+
+
+        // =====================================================
+        // TOTAL FARE
+        // =====================================================
+
+        double farePerSeat =
+                selectedTrain.getFare();
+
+
+        double totalFare =
+                farePerSeat
+                * travellers.size();
+
+
+        System.out.println();
+
+        System.out.println(
+                "Fare Per Traveller : Rs."
+                + farePerSeat
+        );
+
+
+        System.out.println(
+                "Number Of Travellers : "
+                + travellers.size()
+        );
+
+
+        System.out.println(
+                "Total Fare : Rs."
+                + totalFare
+        );
+
+
+        // =====================================================
+        // CREATE ONE GROUP BOOKING
+        // =====================================================
+
+        System.out.println();
+
+        System.out.println(
+                "Creating group booking..."
+        );
+
+
+        int bookingId =
+                bookingDAO.createGroupBooking(
+                        selectedTrain.getTrainId(),
+                        travellers
+                );
+
+
+        if (bookingId == -1) {
+
+
+            System.out.println(
+                    "Booking failed!"
+            );
+
+
+            sc.close();
+
+            return;
+        }
+
+
+        // =====================================================
+        // ONE PAYMENT FOR COMPLETE GROUP
+        // =====================================================
+
+        System.out.println();
 
         System.out.println(
                 "Processing payment..."
         );
 
+
         boolean paymentSuccess =
-                true;
+                paymentDAO.makePayment(
+                        bookingId,
+                        totalFare,
+                        paymentMethod
+                );
 
-        double farePerSeat =
-                selectedTrain.getFare();
-
-        for (int i = 0;
-             i < bookingIds.size();
-             i++) {
-
-            boolean success =
-                    paymentDAO.makePayment(
-                            bookingIds.get(i),
-                            farePerSeat,
-                            paymentMethod
-                    );
-
-            if (!success) {
-
-                paymentSuccess =
-                        false;
-
-                break;
-            }
-        }
-
-        // =====================================================
-        // PAYMENT FAILED
-        // =====================================================
 
         if (!paymentSuccess) {
 
-            System.out.println();
-            System.out.println(
-                    "Payment failed."
-            );
 
             System.out.println(
-                    "Please contact support."
+                    "Payment failed!"
             );
+
 
             sc.close();
+
             return;
         }
 
+
         // =====================================================
-        // BOOKING CONFIRMATION
+        // BOOKING SUCCESS
         // =====================================================
 
         System.out.println();
-        System.out.println();
+
         System.out.println(
-                "=============================================="
+                "=========================================="
         );
 
+
         System.out.println(
-                "             BOOKING CONFIRMED!"
+                "          BOOKING SUCCESSFUL"
         );
 
+
         System.out.println(
-                "=============================================="
+                "=========================================="
         );
 
-        System.out.println();
 
         System.out.println(
-                "Passenger Name   : "
-                + name
+                "Booking ID : "
+                + bookingId
         );
 
-        System.out.println(
-                "Age              : "
-                + age
-        );
 
         System.out.println(
-                "Gender           : "
-                + gender
-        );
-
-        System.out.println(
-                "Phone            : "
-                + phone
-        );
-
-        System.out.println(
-                "Email            : "
-                + email
-        );
-
-        System.out.println(
-                "----------------------------------------------"
-        );
-
-        System.out.println(
-                "Train            : "
+                "Train : "
                 + selectedTrain.getTrainName()
         );
 
+
         System.out.println(
-                "Train Number     : "
+                "Train Number : "
                 + selectedTrain.getTrainNumber()
         );
 
+
         System.out.println(
-                "Route            : "
+                "Route : "
                 + selectedTrain.getSource()
                 + " -> "
                 + selectedTrain.getDestination()
         );
 
+
         System.out.println(
-                "Departure        : "
-                + selectedTrain.getDepartureTime()
+                "Total Travellers : "
+                + travellers.size()
         );
 
-        System.out.println(
-                "Arrival          : "
-                + selectedTrain.getArrivalTime()
-        );
 
         System.out.println(
-                "----------------------------------------------"
-        );
-
-        System.out.println(
-                "Seats Booked:"
-        );
-
-        for (int i = 0;
-             i < selectedSeats.size();
-             i++) {
-
-            System.out.println(
-                    "  "
-                    + selectedSeats.get(i)
-                    + "  -> Booking ID: "
-                    + bookingIds.get(i)
-            );
-        }
-
-        System.out.println(
-                "----------------------------------------------"
-        );
-
-        System.out.println(
-                "Total Seats      : "
-                + selectedSeats.size()
-        );
-
-        System.out.println(
-                "Amount Paid      : Rs."
+                "Total Amount : Rs."
                 + totalFare
         );
 
-        System.out.println(
-                "Payment Method   : "
-                + paymentMethod
-        );
-
-        System.out.println(
-                "Payment Status   : SUCCESS"
-        );
-
-        System.out.println(
-                "Booking Status   : CONFIRMED"
-        );
 
         System.out.println();
 
         System.out.println(
-                "=============================================="
+                "Traveller Seats:"
         );
 
-        System.out.println(
-                "       Thank you for booking with RailSync!"
-        );
+
+        for (int i = 0;
+             i < travellers.size();
+             i++) {
+
+
+            Traveller traveller =
+                    travellers.get(i);
+
+
+            System.out.println(
+                    (i + 1)
+                    + ". "
+                    + traveller.getName()
+                    + " -> Seat "
+                    + traveller.getSeatNumber()
+            );
+        }
+
+
+        System.out.println();
 
         System.out.println(
-                "=============================================="
+                "Payment Method : "
+                + paymentMethod
         );
+
+
+        System.out.println();
+
+        System.out.println(
+                "You can use Booking ID "
+                + bookingId
+                + " to View Ticket."
+        );
+
+
+        System.out.println(
+                "=========================================="
+        );
+
 
         sc.close();
     }
