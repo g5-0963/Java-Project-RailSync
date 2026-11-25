@@ -1,28 +1,38 @@
+
 package dao;
 
 import db.DBConnection;
+import model.Traveller;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Date;
+import java.time.LocalDate;
 import java.util.ArrayList;
 
 public class BookingDAO {
 
-    // Get seats which are already booked for a particular train
+    // =========================================================
+    // GET BOOKED SEATS FOR A TRAIN
+    // =========================================================
+
     public ArrayList<String> getBookedSeats(int trainId) {
 
         ArrayList<String> bookedSeats = new ArrayList<>();
 
-        String sql = "SELECT seat_number FROM bookings " +
-                     "WHERE train_id = ? AND status = 'CONFIRMED'";
+        String sql =
+                "SELECT bp.seat_number " +
+                "FROM booking_passengers bp " +
+                "JOIN bookings b " +
+                "ON bp.booking_id = b.booking_id " +
+                "WHERE b.train_id = ? " +
+                "AND b.status = 'CONFIRMED'";
 
-        try {
-
-            Connection con = DBConnection.getConnection();
-
-            PreparedStatement ps = con.prepareStatement(sql);
+        try (
+                Connection con = DBConnection.getConnection();
+                PreparedStatement ps = con.prepareStatement(sql)
+        ) {
 
             ps.setInt(1, trainId);
 
@@ -36,10 +46,13 @@ public class BookingDAO {
             }
 
             rs.close();
-            ps.close();
-            con.close();
 
         } catch (Exception e) {
+
+            System.out.println(
+                    "Error while getting booked seats."
+            );
+
             e.printStackTrace();
         }
 
@@ -47,100 +60,17 @@ public class BookingDAO {
     }
 
 
-    // Create ONE booking
-    public int createBooking(int passengerId,
-                             int trainId,
-                             String seatNumber,
-                             double fare) {
+    // =========================================================
+    // CREATE GROUP BOOKING
+    // =========================================================
 
-        Connection con = null;
-
-        try {
-
-            con = DBConnection.getConnection();
-
-            String sql =
-                    "INSERT INTO bookings " +
-                    "(passenger_id, train_id, seat_number, booking_date, status) " +
-                    "VALUES (?, ?, ?, ?, ?)";
-
-            PreparedStatement ps =
-                    con.prepareStatement(
-                            sql,
-                            PreparedStatement.RETURN_GENERATED_KEYS
-                    );
-
-            ps.setInt(1, passengerId);
-            ps.setInt(2, trainId);
-            ps.setString(3, seatNumber);
-
-            ps.setDate(
-                    4,
-                    new Date(System.currentTimeMillis())
-            );
-
-            ps.setString(5, "CONFIRMED");
-
-            ps.executeUpdate();
-
-            ResultSet rs = ps.getGeneratedKeys();
-
-            int bookingId = -1;
-
-            if (rs.next()) {
-                bookingId = rs.getInt(1);
-            }
-
-            rs.close();
-            ps.close();
-
-            // Reduce available seats by 1
-            String updateSql =
-                    "UPDATE trains " +
-                    "SET available_seats = available_seats - 1 " +
-                    "WHERE train_id = ? " +
-                    "AND available_seats > 0";
-
-            PreparedStatement updatePs =
-                    con.prepareStatement(updateSql);
-
-            updatePs.setInt(1, trainId);
-
-            updatePs.executeUpdate();
-
-            updatePs.close();
-            con.close();
-
-            return bookingId;
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            try {
-                if (con != null) {
-                    con.close();
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-
-        return -1;
-    }
-
-
-    // Create MULTIPLE bookings
-    public ArrayList<Integer> createBookings(
-            int passengerId,
+    public int createGroupBooking(
             int trainId,
-            ArrayList<String> seatNumbers,
-            double fare) {
-
-        ArrayList<Integer> bookingIds =
-                new ArrayList<>();
+            ArrayList<Traveller> travellers) {
 
         Connection con = null;
+
+        int bookingId = -1;
 
         try {
 
@@ -149,106 +79,576 @@ public class BookingDAO {
             // Start transaction
             con.setAutoCommit(false);
 
-            String sql =
-                    "INSERT INTO bookings " +
-                    "(passenger_id, train_id, seat_number, booking_date, status) " +
+
+            // -------------------------------------------------
+            // CHECK TRAIN EXISTS
+            // -------------------------------------------------
+
+String trainCheckSQL =
+        "SELECT train_id, fare " +
+        "FROM trains " +
+        "WHERE train_id = ?";
+
+PreparedStatement trainCheck =
+        con.prepareStatement(trainCheckSQL);
+
+trainCheck.setInt(
+        1,
+        trainId
+);
+
+ResultSet trainRS =
+        trainCheck.executeQuery();
+
+if (!trainRS.next()) {
+
+    System.out.println(
+            "Train not found."
+    );
+
+    trainRS.close();
+    trainCheck.close();
+
+    con.rollback();
+
+    return -1;
+}
+
+
+// Get fare of the selected train
+double fare =
+        trainRS.getDouble("fare");
+
+
+// Calculate total booking amount
+double totalAmount =
+        fare * travellers.size();
+
+
+trainRS.close();
+trainCheck.close();
+
+
+
+            // -------------------------------------------------
+            // INSERT ALL TRAVELLERS INTO PASSENGERS TABLE
+            // -------------------------------------------------
+
+            String passengerSQL =
+                    "INSERT INTO passengers " +
+                    "(name, age, gender, phone, email) " +
                     "VALUES (?, ?, ?, ?, ?)";
 
-            PreparedStatement ps =
+            PreparedStatement passengerPS =
                     con.prepareStatement(
-                            sql,
+                            passengerSQL,
                             PreparedStatement.RETURN_GENERATED_KEYS
                     );
 
-            for (String seat : seatNumbers) {
 
-                ps.setInt(1, passengerId);
-                ps.setInt(2, trainId);
-                ps.setString(3, seat);
+            ArrayList<Integer> passengerIds =
+                    new ArrayList<>();
 
-                ps.setDate(
-                        4,
-                        new Date(System.currentTimeMillis())
+
+            for (Traveller traveller : travellers) {
+
+                passengerPS.setString(
+                        1,
+                        traveller.getName()
                 );
 
-                ps.setString(5, "CONFIRMED");
+                passengerPS.setInt(
+                        2,
+                        traveller.getAge()
+                );
 
-                ps.executeUpdate();
+                passengerPS.setString(
+                        3,
+                        traveller.getGender()
+                );
 
-                ResultSet rs = ps.getGeneratedKeys();
+                passengerPS.setString(
+                        4,
+                        traveller.getPhone()
+                );
 
-                if (rs.next()) {
-                    bookingIds.add(rs.getInt(1));
+                passengerPS.setString(
+                        5,
+                        traveller.getEmail()
+                );
+
+                passengerPS.executeUpdate();
+
+
+                ResultSet generatedKeys =
+                        passengerPS.getGeneratedKeys();
+
+                if (generatedKeys.next()) {
+
+                    int passengerId =
+                            generatedKeys.getInt(1);
+
+                    passengerIds.add(
+                            passengerId
+                    );
+
+                } else {
+
+                    throw new Exception(
+                            "Passenger ID could not be generated."
+                    );
                 }
 
-                rs.close();
+                generatedKeys.close();
             }
 
-            ps.close();
+            passengerPS.close();
 
 
-            // Reduce available seats according to
-            // number of selected seats
-            String updateSql =
-                    "UPDATE trains " +
-                    "SET available_seats = available_seats - ? " +
-                    "WHERE train_id = ? " +
-                    "AND available_seats >= ?";
+            // -------------------------------------------------
+            // CREATE ONE MASTER BOOKING
+            // -------------------------------------------------
+            
+String bookingSQL =
+        "INSERT INTO bookings " +
+        "(train_id, booking_date, status, total_amount) " +
+        "VALUES (?, ?, ?, ?)";
 
-            PreparedStatement updatePs =
-                    con.prepareStatement(updateSql);
+PreparedStatement bookingPS =
+        con.prepareStatement(
+                bookingSQL,
+                PreparedStatement.RETURN_GENERATED_KEYS
+        );
 
-            int numberOfSeats = seatNumbers.size();
+bookingPS.setInt(
+        1,
+        trainId
+);
 
-            updatePs.setInt(1, numberOfSeats);
-            updatePs.setInt(2, trainId);
-            updatePs.setInt(3, numberOfSeats);
+bookingPS.setDate(
+        2,
+        Date.valueOf(
+                LocalDate.now()
+        )
+);
 
-            int updated =
-                    updatePs.executeUpdate();
+bookingPS.setString(
+        3,
+        "CONFIRMED"
+);
 
-            updatePs.close();
+bookingPS.setDouble(
+        4,
+        totalAmount
+);
+
+bookingPS.executeUpdate();
+
+ResultSet bookingKeys =
+        bookingPS.getGeneratedKeys();
+
+if (bookingKeys.next()) {
+
+    bookingId =
+            bookingKeys.getInt(1);
+
+} else {
+
+    throw new Exception(
+            "Booking ID could not be generated."
+    );
+}
+
+bookingKeys.close();
+bookingPS.close();
+            
+
+          
+            // INSERT TRAVELLERS + SEATS
+           
+            String bookingPassengerSQL =
+                    "INSERT INTO booking_passengers " +
+                    "(booking_id, passenger_id, seat_number) " +
+                    "VALUES (?, ?, ?)";
+
+            PreparedStatement bpPS =
+                    con.prepareStatement(
+                            bookingPassengerSQL
+                    );
 
 
-            if (updated == 0) {
+            for (int i = 0;
+                 i < travellers.size();
+                 i++) {
 
-                con.rollback();
+                Traveller traveller =
+                        travellers.get(i);
 
-                bookingIds.clear();
 
-                System.out.println(
-                        "Not enough seats available!"
+                bpPS.setInt(
+                        1,
+                        bookingId
                 );
 
-                con.close();
+                bpPS.setInt(
+                        2,
+                        passengerIds.get(i)
+                );
 
-                return bookingIds;
+                bpPS.setString(
+                        3,
+                        traveller.getSeatNumber()
+                );
+
+                bpPS.executeUpdate();
             }
 
+            bpPS.close();
 
-            // Save everything
+
+            // -------------------------------------------------
+            // NO available_seats UPDATE
+            //
+            // Seat availability is calculated from
+            // booking_passengers.
+            // -------------------------------------------------
+
+
+            // -------------------------------------------------
+            // COMMIT TRANSACTION
+            // -------------------------------------------------
+
             con.commit();
 
-            con.close();
+            con.setAutoCommit(true);
+
+            return bookingId;
+
 
         } catch (Exception e) {
 
+            System.out.println(
+                    "Booking failed!"
+            );
+
             e.printStackTrace();
 
-            try {
 
-                if (con != null) {
+            // -------------------------------------------------
+            // ROLLBACK
+            // -------------------------------------------------
+
+            if (con != null) {
+
+                try {
+
                     con.rollback();
-                    con.close();
-                }
 
-            } catch (Exception ex) {
-                ex.printStackTrace();
+                } catch (Exception rollbackError) {
+
+                    rollbackError.printStackTrace();
+                }
             }
 
-            bookingIds.clear();
-        }
+            return -1;
 
-        return bookingIds;
+
+        } finally {
+
+            if (con != null) {
+
+                try {
+
+                    con.close();
+
+                } catch (Exception closeError) {
+
+                    closeError.printStackTrace();
+                }
+            }
+        }
+    }
+
+
+    // VIEW TICKET
+  
+
+    public void viewTicket(int bookingId) {
+
+        String sql =
+                "SELECT " +
+                "b.booking_id, " +
+                "b.booking_date, " +
+                "b.status, " +
+
+                "t.train_number, " +
+                "t.train_name, " +
+                "t.source, " +
+                "t.destination, " +
+                "t.departure_time, " +
+                "t.arrival_time, " +
+                "t.fare, " +
+
+                "p.name, " +
+                "p.age, " +
+                "p.gender, " +
+                "p.phone, " +
+                "p.email, " +
+
+                "bp.seat_number " +
+
+                "FROM bookings b " +
+
+                "JOIN trains t " +
+                "ON b.train_id = t.train_id " +
+
+                "JOIN booking_passengers bp " +
+                "ON b.booking_id = bp.booking_id " +
+
+                "JOIN passengers p " +
+                "ON bp.passenger_id = p.passenger_id " +
+
+                "WHERE b.booking_id = ? " +
+
+                "ORDER BY bp.booking_passenger_id";
+
+
+        try (
+                Connection con =
+                        DBConnection.getConnection();
+
+                PreparedStatement ps =
+                        con.prepareStatement(sql)
+        ) {
+
+            ps.setInt(
+                    1,
+                    bookingId
+            );
+
+
+            ResultSet rs =
+                    ps.executeQuery();
+
+
+            if (!rs.next()) {
+
+                System.out.println(
+                        "\nBooking not found."
+                );
+
+                return;
+            }
+
+
+          
+            // FIRST ROW
+         
+
+            String bookingDate =
+                    rs.getDate(
+                            "booking_date"
+                    ).toString();
+
+            String status =
+                    rs.getString(
+                            "status"
+                    );
+
+            String trainNumber =
+                    rs.getString(
+                            "train_number"
+                    );
+
+            String trainName =
+                    rs.getString(
+                            "train_name"
+                    );
+
+            String source =
+                    rs.getString(
+                            "source"
+                    );
+
+            String destination =
+                    rs.getString(
+                            "destination"
+                    );
+
+            String departure =
+                    rs.getString(
+                            "departure_time"
+                    );
+
+            String arrival =
+                    rs.getString(
+                            "arrival_time"
+                    );
+
+            double fare =
+                    rs.getDouble(
+                            "fare"
+                    );
+
+
+           
+            // PRINT TICKET HEADER
+            
+            System.out.println();
+
+            System.out.println(
+                    "=========================================="
+            );
+
+            System.out.println(
+                    "          RAILSYNC E-TICKET"
+            );
+
+            System.out.println(
+                    "=========================================="
+            );
+
+
+            System.out.println(
+                    "Booking ID : " + bookingId
+            );
+
+            System.out.println(
+                    "Booking Date : " + bookingDate
+            );
+
+            System.out.println(
+                    "Status : " + status
+            );
+
+
+            System.out.println(
+                    "------------------------------------------"
+            );
+
+
+            System.out.println(
+                    "Train : " + trainName
+            );
+
+            System.out.println(
+                    "Train Number : " + trainNumber
+            );
+
+            System.out.println(
+                    "Route : " +
+                    source +
+                    " -> " +
+                    destination
+            );
+
+            System.out.println(
+                    "Departure : " + departure
+            );
+
+            System.out.println(
+                    "Arrival : " + arrival
+            );
+
+            System.out.println(
+                    "Fare Per Traveller : Rs." +
+                    fare
+            );
+
+
+            System.out.println(
+                    "------------------------------------------"
+            );
+
+
+           
+            // TRAVELLERS
+           
+
+            int travellerCount = 0;
+
+            do {
+
+                travellerCount++;
+
+                System.out.println();
+
+                System.out.println(
+                        "TRAVELLER " +
+                        travellerCount
+                );
+
+
+                System.out.println(
+                        "Name : " +
+                        rs.getString("name")
+                );
+
+                System.out.println(
+                        "Age : " +
+                        rs.getInt("age")
+                );
+
+                System.out.println(
+                        "Gender : " +
+                        rs.getString("gender")
+                );
+
+                System.out.println(
+                        "Phone : " +
+                        rs.getString("phone")
+                );
+
+                System.out.println(
+                        "Email : " +
+                        rs.getString("email")
+                );
+
+                System.out.println(
+                        "Seat : " +
+                        rs.getString("seat_number")
+                );
+
+
+                System.out.println(
+                        "------------------------------------------"
+                );
+
+
+            } while (rs.next());
+
+
+            // -------------------------------------------------
+            // TOTAL
+            // -------------------------------------------------
+
+            double totalAmount =
+                    fare * travellerCount;
+
+
+            System.out.println(
+                    "Total Travellers : " +
+                    travellerCount
+            );
+
+            System.out.println(
+                    "Total Amount : Rs." +
+                    totalAmount
+            );
+
+
+            System.out.println(
+                    "=========================================="
+            );
+
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "Error while viewing ticket."
+            );
+
+            e.printStackTrace();
+        }
     }
 }
